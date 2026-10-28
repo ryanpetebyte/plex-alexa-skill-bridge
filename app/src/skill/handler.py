@@ -132,8 +132,8 @@ class LaunchRequestHandler(AbstractRequestHandler):
         )
 
 
-class PlayMusicIntentHandler(AbstractRequestHandler):
-    """Handles: play [song/artist/album/playlist] [name]"""
+""" class PlayMusicIntentHandler(AbstractRequestHandler):
+    Handles: play [song/artist/album/playlist] [name]
 
     def can_handle(self, handler_input):
         try:
@@ -200,8 +200,80 @@ class PlayMusicIntentHandler(AbstractRequestHandler):
                 .response
             )
 
-        return _speak_and_play(handler_input, tracks, description)
+        return _speak_and_play(handler_input, tracks, description) """
 
+class PlayMusicIntentHandler(AbstractRequestHandler):
+    """Handles: play [song/artist/album/playlist] [name]"""
+
+    def can_handle(self, handler_input):
+        try:
+            return is_intent_name("PlayMusicIntent")(handler_input)
+        except Exception as e:
+            logger.error(f"PlayMusicIntent can_handle error: {e}")
+            return False
+
+    def handle(self, handler_input):
+        slots = handler_input.request_envelope.request.intent.slots or {}
+
+        song_slot = slots.get('song')
+        artist_slot = slots.get('artist')
+        album_slot = slots.get('album')
+        playlist_slot = slots.get('playlist')
+        query_slot = slots.get('query')  # Added if you added the query slot
+
+        song_val = song_slot.value if song_slot else None
+        artist_val = artist_slot.value if artist_slot else None
+        album_val = album_slot.value if album_slot else None
+        playlist_val = playlist_slot.value if playlist_slot else None
+        query_val = query_slot.value if query_slot else None
+
+        query_type = None
+        query = None
+        artist_filter = None
+
+        if song_val:
+            query_type = 'song'
+            query = song_val
+            if artist_val:
+                artist_filter = artist_val
+        elif query_val:  # Fallback to general query slot if defined in model
+            query_type = 'song'
+            query = query_val
+        elif artist_val:
+            query_type = 'artist'
+            query = artist_val
+        elif album_val:
+            query_type = 'album'
+            query = album_val
+        elif playlist_val:
+            query_type = 'playlist'
+            query = playlist_val
+
+        # If no slot filled at all, ONLY THEN fall back to recently played music
+        if not query_type or not query:
+            tracks, description = resolve_play_request('recently_played', '')
+            if not tracks:
+                return (
+                    handler_input.response_builder
+                    .speak(description)
+                    .ask("What would you like to play?")
+                    .response
+                )
+            return _speak_and_play(handler_input, tracks, description)
+
+        # We tried looking up a specific query, but slots were partially filled or text didn't map
+        tracks, description = resolve_play_request(query_type, query, artist_filter=artist_filter)
+
+        if not tracks:
+            # Speak the exact description returned by Plex client (e.g. "I couldn't find a song called...")
+            return (
+                handler_input.response_builder
+                .speak(description)
+                .ask("What would you like to play?")
+                .response
+            )
+
+        return _speak_and_play(handler_input, tracks, description)
 
 class ShuffleArtistIntentHandler(AbstractRequestHandler):
     """Handles: shuffle [artist]"""
