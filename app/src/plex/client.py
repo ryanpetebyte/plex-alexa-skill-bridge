@@ -507,6 +507,18 @@ def resolve_play_request(query_type, query, artist_filter=None):
         track_infos = [track_to_info(t) for t in tracks]
         return track_infos, f"Playing playlist {playlist.get('title')}"
 
+    elif query_type == 'shuffle_playlist':
+        results = search_playlists(query)
+        if not results:
+            return [], f"I couldn't find a playlist called {query}"
+        playlist = results[0]
+        tracks = get_playlist_tracks(playlist.get('ratingKey'))
+        if not tracks:
+            return [], f"The playlist {playlist.get('title')} appears to be empty"
+        random.shuffle(tracks)
+        track_infos = [track_to_info(t) for t in tracks]
+        return track_infos, f"Shuffling playlist {playlist.get('title')}"
+
     elif query_type == 'decade':
         tracks = search_tracks_by_decade(query)
         if not tracks:
