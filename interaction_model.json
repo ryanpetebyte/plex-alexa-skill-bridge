@@ -81,6 +81,25 @@
                     ]
                 },
                 {
+                    "name": "ShufflePlaylistIntent",
+                    "slots": [
+                        {
+                            "name": "playlist",
+                            "type": "AMAZON.MusicPlaylist"
+                        }
+                    ],
+                    "samples": [
+                        "shuffle playlist {playlist}",
+                        "shuffle the playlist {playlist}",
+                        "shuffle my playlist {playlist}",
+                        "shuffle my {playlist} playlist",
+                        "shuffle {playlist} playlist",
+                        "play playlist {playlist} on shuffle",
+                        "play the playlist {playlist} on shuffle",
+                        "play {playlist} playlist on shuffle"
+                    ]
+                },
+                {
                     "name": "AMAZON.PauseIntent",
                     "samples": []
                 },
