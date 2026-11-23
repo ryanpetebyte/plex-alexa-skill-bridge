@@ -305,6 +305,7 @@ Make sure you're using `--workers 1` in the Dockerfile CMD. Multiple workers hav
 | `PLEX_URL` | Yes | Internal Plex server URL (e.g. `http://192.168.1.100:32400`) |
 | `PLEX_TOKEN` | Yes | Plex authentication token (or path to Docker secret file) |
 | `PLEX_PUBLIC_HOSTNAME` | Yes | Public hostname for Plex streaming — FQDN only, no scheme (e.g. `plex.example.com`) |
+| `PLEX_MUSIC_LIBRARY` | No | Narrow music searches to one or more libraries by exact title or UUID (comma-separated; omit to search all music libraries) |
 | `PORT` | No | Port for Flask to listen on (default: `5001`) |
 | `TZ` | No | Container timezone (default: `UTC`) other e.g America/Chicago |
 | `ENABLE_STATUS_PAGE` | No | Set to `true` to enable the `/status` diagnostic page (disabled by default) |

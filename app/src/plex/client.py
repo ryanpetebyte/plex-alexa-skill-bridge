@@ -14,6 +14,7 @@ PLEX_URL = os.environ.get('PLEX_URL', 'http://YOUR_PLEX_IP:32400')
 # https:// is always prepended when building public URLs.
 _raw_public_hostname = os.environ.get('PLEX_PUBLIC_HOSTNAME', '')
 PLEX_PUBLIC_HOSTNAME = _raw_public_hostname.removeprefix('https://').removeprefix('http://').rstrip('/')
+PLEX_MUSIC_LIBRARY = os.environ.get('PLEX_MUSIC_LIBRARY', '').strip()
 
 def _read_secret(env_var, default=''):
     """Read env var value — if it looks like a file path, read the file contents instead."""
@@ -64,9 +65,10 @@ def search_tracks(query):
     all_results = [sr['Metadata'] for sr in search_results if 'Metadata' in sr]
     # Plex occasionally returns albums in a track search — exclude them
     results = [r for r in all_results if r.get('type') == 'track']
+    results = _filter_by_music_libraries(results)
     if len(results) < len(all_results):
         logger.info(f"search_tracks: filtered {len(all_results) - len(results)} non-track result(s)")
-    logger.info(f"search_tracks: query={query!r} results={len(results)} first={results[0].get('title') if results else None}")
+    logger.info(f"search_tracks: query={query!r} results={len(results)}" + (f" first={results[0].get('title')}" if results else ""))
     return results
 
 
@@ -79,6 +81,7 @@ def search_artists(query):
     mc = data.get('MediaContainer', {})
     search_results = mc.get('SearchResult', []) or []
     results = [sr['Metadata'] for sr in search_results if 'Metadata' in sr]
+    results = _filter_by_music_libraries(results)
     logger.info(f"search_artists: query={query!r} results={len(results)} first={results[0].get('title') if results else None}")
     return results
 
@@ -92,6 +95,7 @@ def search_albums(query):
     mc = data.get('MediaContainer', {})
     search_results = mc.get('SearchResult', []) or []
     results = [sr['Metadata'] for sr in search_results if 'Metadata' in sr]
+    results = _filter_by_music_libraries(results)
     logger.info(f"search_albums: query={query!r} results={len(results)} first={results[0].get('title') if results else None}")
     return results
 
@@ -313,15 +317,69 @@ def search_tracks_by_decade(decade):
     logger.info(f"Decade {start_year}: collected {len(all_tracks)} tracks total")
     random.shuffle(all_tracks)
     return all_tracks
-def _get_music_section_key():
-    """Get the key for the first music library section."""
+def _get_music_section_keys():
+    """Return configured music section keys, or every music section when unset."""
     data = _get('/library/sections')
     if not data:
-        return None
-    for section in data.get('MediaContainer', {}).get('Directory', []):
-        if section.get('type') == 'artist':
-            return section.get('key')
-    return None
+        return []
+
+    sections = [
+        section for section in data.get('MediaContainer', {}).get('Directory', []) or []
+        if section.get('type') == 'artist'
+    ]
+
+    if not PLEX_MUSIC_LIBRARY:
+        return [str(section['key']) for section in sections if section.get('key')]
+
+    selectors = [
+        selector.strip().lower()
+        for selector in PLEX_MUSIC_LIBRARY.replace(';', ',').split(',')
+        if selector.strip()
+    ]
+    matched_keys = []
+
+    for section in sections:
+        section_key = str(section.get('key', ''))
+        candidates = {
+            section_key.lower(),
+            str(section.get('title', '')).lower(),
+            str(section.get('uuid', '')).lower(),
+            str(section.get('guid', '')).lower(),
+        }
+        if any(selector in candidates for selector in selectors):
+            if section_key:
+                matched_keys.append(section_key)
+
+    if matched_keys:
+        logger.info(f"PLEX_MUSIC_LIBRARY matched sections: {matched_keys}")
+    else:
+        logger.warning(
+            f"PLEX_MUSIC_LIBRARY did not match any music library: {PLEX_MUSIC_LIBRARY!r}"
+        )
+    return matched_keys
+
+
+def _get_music_section_key():
+    """Get the key for the first configured music library section."""
+    keys = _get_music_section_keys()
+    return keys[0] if keys else None
+
+
+def _filter_by_music_libraries(results):
+    """Keep metadata from configured music libraries when its section ID is available."""
+    keys = _get_music_section_keys()
+    if not PLEX_MUSIC_LIBRARY:
+        return results
+    if not keys:
+        return []
+
+    key_set = {str(key) for key in keys}
+    filtered = []
+    for item in results:
+        section_id = item.get('librarySectionID') or item.get('librarySectionKey')
+        if section_id is None or str(section_id) in key_set:
+            filtered.append(item)
+    return filtered
 
 
 def get_recently_played_tracks(limit=100):

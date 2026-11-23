@@ -28,6 +28,10 @@ services:
       # Announce how many songs were queued (default: true)
       - ANNOUNCE_QUEUE_COUNT=true
 
+      # Optional: narrow searches to one or more music libraries by title or UUID (comma-separated)
+      # - PLEX_MUSIC_LIBRARY=Music,My Music
+      # - PLEX_MUSIC_LIBRARY=01234567-89ab-cdef-0123-456789abcdef
+
     secrets:
       - PLEX_TOKEN
 
