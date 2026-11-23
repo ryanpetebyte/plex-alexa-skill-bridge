@@ -309,6 +309,7 @@ Make sure you're using `--workers 1` in the Dockerfile CMD. Multiple workers hav
 | `TZ` | No | Container timezone (default: `UTC`) other e.g America/Chicago |
 | `ENABLE_STATUS_PAGE` | No | Set to `true` to enable the `/status` diagnostic page (disabled by default) |
 | `DISABLE_REQUEST_VERIFY` | No | Set to `true` to skip Alexa signature verification (testing only) |
+| `ANNOUNCE_QUEUE_COUNT` | No | Set to `true` to announce the number of songs queued for multi-track playback (default: `true`) |
 
 ## Known Limitations
 

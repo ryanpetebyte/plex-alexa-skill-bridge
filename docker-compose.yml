@@ -25,6 +25,9 @@ services:
       # Uncomment during initial testing to skip Alexa request signature verification
       # - DISABLE_REQUEST_VERIFY=true
 
+      # Announce how many songs were queued (default: true)
+      - ANNOUNCE_QUEUE_COUNT=true
+
     secrets:
       - PLEX_TOKEN
 

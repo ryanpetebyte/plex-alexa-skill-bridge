@@ -4,6 +4,7 @@ Handles PlayMusic intent, AudioPlayer events, and playback controls.
 """
 import logging
 import json
+import os
 from ask_sdk_core.skill_builder import SkillBuilder
 from ask_sdk_core.dispatch_components import AbstractRequestHandler, AbstractExceptionHandler
 from ask_sdk_core.utils import is_intent_name, is_request_type
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 sb = SkillBuilder()
 
 TOKEN_PREFIX = "plex-track-"
+ANNOUNCE_QUEUE_COUNT = os.environ.get('ANNOUNCE_QUEUE_COUNT', 'true').lower() in ('1', 'true', 'yes', 'on')
 
 
 def _user_id(handler_input):
@@ -95,7 +97,7 @@ def _speak_and_play(handler_input, tracks, description):
     track = tracks[0]
     directive = _build_play_directive(track, PlayBehavior.REPLACE_ALL)
     count = len(tracks)
-    suffix = f" {count} songs queued." if count > 1 else "."
+    suffix = f" {count} songs queued." if ANNOUNCE_QUEUE_COUNT and count > 1 else "."
 
     if directive is None:
         logger.error(f"Failed to build play directive for track: {track}")
@@ -105,12 +107,15 @@ def _speak_and_play(handler_input, tracks, description):
             .response
         )
 
-    logger.info(f"Returning play response: {description + suffix}")
+    if ANNOUNCE_QUEUE_COUNT:
+        description += suffix
+
+    logger.info(f"Returning play response: {description}")
     # Clear Alexa's existing queue before starting new playback
     # This prevents previously enqueued tracks from playing after REPLACE_ALL
     return (
         handler_input.response_builder
-        .speak(description + suffix)
+        .speak(description)
         .add_directive(ClearQueueDirective(clear_behavior=ClearBehavior.CLEAR_ALL))
         .add_directive(directive)
         .response
